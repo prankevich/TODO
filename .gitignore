@@ -1,0 +1,10 @@
+# env file
+.env
+
+# configurtions
+config.json
+
+# Editor/IDE
+.idea/
+.vscode/
+
