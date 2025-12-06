@@ -12,10 +12,12 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/sethvargo/go-envconfig"
+	"time"
 )
 
 func main() {
 	_ = godotenv.Load(".env")
+
 	var cfg config.Config
 	if err := envconfig.ProcessWith(context.TODO(), &envconfig.Config{
 		Target:   &cfg,
@@ -23,35 +25,41 @@ func main() {
 	}); err != nil {
 		panic(err)
 	}
-	log := logger.New()
-	ctx := context.Background()
 
-	//  Postgres
+	log := logger.New()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Подключение к БД
 	pg, err := sqlx.Connect("postgres", cfg.Postgres.ConnectionURL())
 	if err != nil {
-		log.Fatalf("db: %v", err)
+		log.Error().Err(err).Msg("Ошибка подключения к БД")
+		return
 	}
 	defer pg.Close()
 
 	// Telegram
 	bot, err := tgbot.NewBotAPI(cfg.Telegram.Token)
 	if err != nil {
-		log.Fatalf("telegram: %v", err)
+		log.Error().Err(err).Msg("Ошибка подключения к Telegram")
+		return
 	}
 
-	// Repos
+	// Репозиторий и сервис
 	todoRepo := dbstore.NewRepo(pg)
-	// Services
 	todoSvc := services.NewService(todoRepo)
-	// Router
+
+	// Telegram Router
 	tgRouter := telegram.NewRouter(bot, todoSvc)
+	tgRouter.StartDueTaskNotifier(ctx, 1*time.Hour)
 
 	go func() {
-		log.Printf("telegram bot started")
+		log.Info().Msg("Telegram bot started")
 		if err := tgRouter.Run(ctx); err != nil {
-			log.Printf("telegram error: %v", err)
+			log.Error().Err(err).Msg("Telegram bot error")
 		}
 	}()
+
 	<-ctx.Done()
-	log.Printf("bye")
+	log.Info().Msg("Shutting down")
 }
