@@ -5,37 +5,44 @@ import (
 	"time"
 )
 
+const ServiceLabel = "auth_service"
+
 type Config struct {
-	Postgres *Postgres `env:",prefix=POSTGRES_"`
-	Telegram *Telegram `env:",prefix=TELEGRAM_"`
+	HTTPPort   string     `env:"HTTP_PORT" default:"8284"`
+	AMQPURL    string     `env:"AMQP_URL"`
+	Postgres   *Postgres  `env:",prefix=POSTGRES_"`
+	AuthParams AuthParams `env:",prefix=JWT_"`
 }
 
-type Telegram struct {
-	Token string `env:"TOKEN" envDefault:""`
+type AuthParams struct {
+	AccessTokenTllMinutes int    `env:"ACCESS_TOKEN_TLL_MINUTES"`
+	RefreshTokenTllDays   int    `env:"REFRESH_TOKEN_TLL_DAYS"`
+	SECRET                string `env:"SECRET"`
 }
 
 type Postgres struct {
-	Env                   string        `env:"ENV" envDefault:"dev"`
-	Host                  string        `env:"HOST" envDefault:"127.0.0.1"`
-	Port                  int           `env:"PORT" envDefault:"5432"`
-	User                  string        `env:"USER" envDefault:"postgres"`
-	Password              string        `env:"PASSWORD" envDefault:"postgres"`
-	Database              string        `env:"DATABASE" envDefault:""`
-	SSLMode               string        `env:"SSL_MODE" envDefault:"disable"`
-	MaxIdleConnections    int           `env:"MAX_IDLE_CONNECTIONS" envDefault:"25"`
-	MaxOpenConnections    int           `env:"MAX_OPEN_CONNECTIONS" envDefault:"25"`
-	ConnectionMaxLifetime time.Duration `env:"CONNECTION_MAX_LIFETIME" envDefault:"5m"`
+	PostgresHost          string        `env:"HOST" default:"localhost"`
+	PostgresPort          int           `env:"PORT" default:"5432"`
+	PostgresUser          string        `env:"USER" default:"postgres"`
+	PostgresPassword      string        `env:"PASSWORD" default:"postgres"`
+	PostgresDatabase      string        `env:"DATABASE"`
+	PostgresSSLMode       string        `env:"SSL_MODE" default:"disable"`
+	MaxIdleConnections    int           `env:"MAX_IDLE_CONNECTIONS" default:"25"`
+	MaxOpenConnections    int           `env:"MAX_OPEN_CONNECTIONS" default:"25"`
+	ConnectionMaxLifetime time.Duration `env:"CONNECTION_MAX_LIFETIME" default:"5m"`
 }
 
-func (p *Postgres) ConnectionURL() string {
-	if p.User == "" {
-		return fmt.Sprintf("host=%s port=%d dbname=%s sslmode=%s",
-			p.Host, p.Port, p.Database, p.SSLMode)
+func (c *Postgres) ConnectionURL() string {
+	if c.PostgresUser == "" {
+		return fmt.Sprintf("host=%s port=%d  dbname=%s sslmode=disable",
+			c.PostgresHost, c.PostgresPort, c.PostgresDatabase)
 	}
-	if p.Password == "" {
-		return fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=%s",
-			p.Host, p.Port, p.User, p.Database, p.SSLMode)
+
+	if c.PostgresPassword == "" {
+		return fmt.Sprintf("host=%s port=%d user=%s  dbname=%s sslmode=disable",
+			c.PostgresHost, c.PostgresPort, c.PostgresUser, c.PostgresDatabase)
 	}
-	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		p.Host, p.Port, p.User, p.Password, p.Database, p.SSLMode)
+
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		c.PostgresHost, c.PostgresPort, c.PostgresUser, c.PostgresPassword, c.PostgresDatabase)
 }

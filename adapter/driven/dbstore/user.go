@@ -93,3 +93,28 @@ func (r *Repo) ListDoneTasks(ctx context.Context, userID string) ([]models.Task,
          FROM tasks WHERE user_id=$1 and done = true  ORDER BY created_at DESC`, userID)
 	return tasks, err
 }
+func (r *Repo) Login(username, password string) (*models.User, error) {
+	var u models.User
+	err := r.db.Get(&u, "SELECT id, username, password FROM users WHERE username=$1 AND password=$2", username, password)
+	if err != nil {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+	return &u, nil
+}
+func (r *Repo) Register(user models.User) error {
+	_, err := r.db.Exec(
+		"INSERT INTO users (username, password) VALUES ($1, $2)",
+		user.Username, user.Password,
+	)
+	return err
+}
+func (r *Repo) Stats() (map[string]interface{}, error) {
+	var count int
+	err := r.db.Get(&count, "SELECT COUNT(*) FROM users")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stats: %w", err)
+	}
+	return map[string]interface{}{
+		"users_count": count,
+	}, nil
+}

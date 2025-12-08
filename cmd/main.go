@@ -2,6 +2,8 @@ package main
 
 import (
 	"TODO/adapter/driven/dbstore"
+	"TODO/adapter/driving/api"
+
 	"TODO/adapter/driving/telegram"
 	"TODO/config"
 	"TODO/pkg/logger"
@@ -12,6 +14,7 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/sethvargo/go-envconfig"
+	"net/http"
 	"time"
 )
 
@@ -53,6 +56,22 @@ func main() {
 	tgRouter := telegram.NewRouter(bot, todoSvc)
 	tgRouter.StartDueTaskNotifier(ctx, 1*time.Hour)
 
+	// HTTP API
+	apiSrv := api.NewAPI(todoRepo)
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: apiSrv.Routes(),
+	}
+
+	// Запуск HTTP сервера
+	go func() {
+		log.Info().Msg("HTTP API started on :8080")
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error().Err(err).Msg("HTTP server error")
+		}
+	}()
+
+	// Запуск Telegram бота
 	go func() {
 		log.Info().Msg("Telegram bot started")
 		if err := tgRouter.Run(ctx); err != nil {
@@ -60,6 +79,7 @@ func main() {
 		}
 	}()
 
+	// Ожидание завершения
 	<-ctx.Done()
 	log.Info().Msg("Shutting down")
 }
