@@ -2,8 +2,9 @@ package telegram
 
 import (
 	"fmt"
-	tgbot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"time"
+
+	tgbot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 func BuildCalendar(year int, month time.Month) tgbot.InlineKeyboardMarkup {

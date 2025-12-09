@@ -15,10 +15,3 @@ type TodoRepository interface {
 	ListDueTasks(ctx context.Context, before time.Time) ([]models.Task, error)
 	ListDoneTasks(ctx context.Context, userID string) ([]models.Task, error)
 }
-
-// AuthService — интерфейс для работы с пользователями.
-type AuthService interface {
-	Register(user models.User) error
-	Login(username, password string) (*models.User, error)
-	Stats() (map[string]interface{}, error)
-}

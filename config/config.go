@@ -12,6 +12,7 @@ type Config struct {
 	AMQPURL    string     `env:"AMQP_URL"`
 	Postgres   *Postgres  `env:",prefix=POSTGRES_"`
 	AuthParams AuthParams `env:",prefix=JWT_"`
+	Telegram   *Telegram  `env:",prefix=TELEGRAM_"`
 }
 
 type AuthParams struct {
@@ -30,6 +31,9 @@ type Postgres struct {
 	MaxIdleConnections    int           `env:"MAX_IDLE_CONNECTIONS" default:"25"`
 	MaxOpenConnections    int           `env:"MAX_OPEN_CONNECTIONS" default:"25"`
 	ConnectionMaxLifetime time.Duration `env:"CONNECTION_MAX_LIFETIME" default:"5m"`
+}
+type Telegram struct {
+	Token string `env:"TOKEN" default:"TOKEN"`
 }
 
 func (c *Postgres) ConnectionURL() string {

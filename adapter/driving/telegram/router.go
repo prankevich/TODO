@@ -5,11 +5,12 @@ import (
 	"TODO/services/contracts"
 	"context"
 	"fmt"
-	tgbot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	tgbot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 var userStates = make(map[int64]*UserState)
