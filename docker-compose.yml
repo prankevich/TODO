@@ -1,0 +1,57 @@
+services:
+  app:
+    build: .
+    env_file:
+      - .env
+    environment:
+      # внутри docker-сети Postgres доступен по имени сервиса "postgres"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+
+      # RabbitMQ ты запускаешь в другом проекте.
+      # Если он там проброшен наружу как 5673:5672,
+      # то из контейнера к нему можно ходить так:
+      AMQP_URL: amqp://guest:guest@host.docker.internal:5673/
+    ports:
+      - "8284:8284"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    container_name: todo_db
+    environment:
+      POSTGRES_DB: todo_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    ports:
+      - "5434:5432"        # с хоста: localhost:5434
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  migrate:
+    image: migrate/migrate
+    container_name: auth_service_migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations
+    command:
+      [
+        "-path", "/migrations",
+        "-database", "postgres://postgres:postgres@postgres:5432/auth_service_db?sslmode=disable",
+        "up"
+      ]
+    restart: "no"
+
+volumes:
+  pgdata:

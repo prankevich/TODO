@@ -6,7 +6,6 @@ POSTGRES_DATABASE=postgres
 
 DB_URL=postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DATABASE)?sslmode=disable
 
-.PHONY: migrate-up migrate-down migrate-reset migrate-create format lint
 
 migrate-up:
 	migrate -path ./migrations -database "$(DB_URL)" up
