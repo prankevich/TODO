@@ -8,12 +8,16 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	tgbot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-var userStates = make(map[int64]*UserState)
+var (
+	userStates = make(map[int64]*UserState)
+	mu         sync.Mutex
+)
 
 type Router struct {
 	bot  *tgbot.BotAPI
@@ -25,6 +29,24 @@ type UserState struct {
 	TempTask models.Task
 }
 
+func getState(userID int64) (*UserState, bool) {
+	mu.Lock()
+	defer mu.Unlock()
+	state, ok := userStates[userID]
+	return state, ok
+}
+
+func setState(userID int64, state *UserState) {
+	mu.Lock()
+	defer mu.Unlock()
+	userStates[userID] = state
+}
+
+func deleteState(userID int64) {
+	mu.Lock()
+	defer mu.Unlock()
+	delete(userStates, userID)
+}
 func NewRouter(bot *tgbot.BotAPI, todo contracts.TodoRepository) *Router {
 	return &Router{
 		bot:  bot,
@@ -60,7 +82,7 @@ func (r *Router) HandleMessage(ctx context.Context, msg *tgbot.Message) {
 	text := strings.TrimSpace(msg.Text)
 	log.Printf("User %s (tg_%d) написал: %q", msg.From.UserName, telegramID, text)
 
-	state, ok := userStates[telegramID]
+	state, ok := getState(telegramID)
 	if !ok {
 		r.SendMainMenu(msg.Chat.ID)
 		return
@@ -77,9 +99,11 @@ func (r *Router) HandleMessage(ctx context.Context, msg *tgbot.Message) {
 		state.TempTask.DueAt = &date
 		if state.Step == 1 {
 			state.Step = 2
+			setState(telegramID, state)
 			r.Reply(msg.Chat.ID, fmt.Sprintf("Вы выбрали дату: %s", date.Format("02-01-2006")))
 			r.Reply(msg.Chat.ID, "Введите заголовок задачи:")
 		} else {
+			setState(telegramID, state)
 			r.finishUpdate(ctx, msg.Chat.ID, telegramID, state.TempTask)
 		}
 
@@ -90,6 +114,7 @@ func (r *Router) HandleMessage(ctx context.Context, msg *tgbot.Message) {
 		}
 		state.TempTask.Title = text
 		state.Step = 3
+		setState(telegramID, state)
 		r.Reply(msg.Chat.ID, "Введите описание задачи:")
 
 	case 3:
@@ -99,17 +124,16 @@ func (r *Router) HandleMessage(ctx context.Context, msg *tgbot.Message) {
 		}
 		state.TempTask.Notes = text
 		state.TempTask.CreatedAt = time.Now().UTC()
+		setState(telegramID, state)
 
 		task, err := r.todo.CreateTask(ctx, state.TempTask)
 		if err != nil {
 			log.Printf("Ошибка при добавлении задачи: %v", err)
 			r.Reply(msg.Chat.ID, "❌ Ошибка при добавлении задачи")
 		} else {
-			r.Reply(msg.Chat.ID, fmt.Sprintf("✅ Задача \"%s\" добавлена на %s",
-				task.Title, task.DueAt.Format("02-01-2006")))
+			r.Reply(msg.Chat.ID, fmt.Sprintf("✅ Задача \"%s\" добавлена на %s", task.Title, task.DueAt.Format("02-01-2006")))
 		}
-
-		delete(userStates, telegramID)
+		deleteState(telegramID)
 		r.SendMainMenu(msg.Chat.ID)
 
 	case 12:
@@ -118,6 +142,7 @@ func (r *Router) HandleMessage(ctx context.Context, msg *tgbot.Message) {
 			return
 		}
 		state.TempTask.Title = text
+		setState(telegramID, state)
 		r.finishUpdate(ctx, msg.Chat.ID, telegramID, state.TempTask)
 
 	case 13:
@@ -126,6 +151,7 @@ func (r *Router) HandleMessage(ctx context.Context, msg *tgbot.Message) {
 			return
 		}
 		state.TempTask.Notes = text
+		setState(telegramID, state)
 		r.finishUpdate(ctx, msg.Chat.ID, telegramID, state.TempTask)
 	}
 }

@@ -40,13 +40,10 @@ func (s *Service) UpdateTask(ctx context.Context, t models.Task) (models.Task, e
 		return t, fmt.Errorf("task ID is required")
 	}
 
-	// Можно добавить бизнес‑правила:
-	// например, запрещать обновление завершённых задач
 	if t.Done {
 		return t, fmt.Errorf("cannot update completed task")
 	}
 
-	// Делегируем обновление репозиторию
 	updatedTask, err := s.repo.UpdateTask(ctx, t)
 	if err != nil {
 		return t, err

@@ -3,7 +3,6 @@ package dbstore
 import (
 	"TODO/adapter/driven/models"
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -42,20 +41,25 @@ func (r *Repo) CompleteTask(ctx context.Context, id string) error {
 }
 func (r *Repo) UpdateTask(ctx context.Context, t models.Task) (models.Task, error) {
 	t.UpdatedAt = time.Now().UTC()
+	if t.Title == "" {
+		t.Title = ""
+	}
+	if t.Notes == "" {
+		t.Notes = ""
+	}
 	_, err := r.db.NamedExecContext(ctx, `
-	UPDATE tasks
-	SET
-		title = COALESCE(NULLIF(:title, ''), title),
-		notes = COALESCE(NULLIF(:notes, ''), notes),
-		due_at = COALESCE(:due_at, due_at),
-		done = COALESCE(:done, done),
-		updated_at = :updated_at
-	WHERE id = :id
-`, t)
+        UPDATE tasks
+        SET
+            title = :title,
+            notes = :notes,
+            due_at = :due_at,
+            done = :done,
+            updated_at = :updated_at
+        WHERE id = :id
+    `, t)
 	if err != nil {
 		return t, err
 	}
-	fmt.Println(t)
 	return t, nil
 }
 func (r *Repo) DeleteTask(ctx context.Context, id string) error {
@@ -93,14 +97,4 @@ func (r *Repo) ListDoneTasks(ctx context.Context, userID string) ([]models.Task,
 		`SELECT id, user_id, title, notes, due_at, done, created_at, updated_at
          FROM tasks WHERE user_id=$1 and done = true  ORDER BY created_at DESC`, userID)
 	return tasks, err
-}
-func (r *Repo) Stats() (map[string]interface{}, error) {
-	var count int
-	err := r.db.Get(&count, "SELECT COUNT(*) FROM users")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stats: %w", err)
-	}
-	return map[string]interface{}{
-		"users_count": count,
-	}, nil
 }
