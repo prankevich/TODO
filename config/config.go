@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -37,16 +38,22 @@ type Telegram struct {
 }
 
 func (c *Postgres) ConnectionURL() string {
+	// Если Railway задал DATABASE_URL — используем его
+	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
+		return dbURL
+	}
+
+	// Иначе собираем вручную
 	if c.PostgresUser == "" {
-		return fmt.Sprintf("host=%s port=%d  dbname=%s sslmode=disable",
-			c.PostgresHost, c.PostgresPort, c.PostgresDatabase)
+		return fmt.Sprintf("host=%s port=%d dbname=%s sslmode=%s",
+			c.PostgresHost, c.PostgresPort, c.PostgresDatabase, c.PostgresSSLMode)
 	}
 
 	if c.PostgresPassword == "" {
-		return fmt.Sprintf("host=%s port=%d user=%s  dbname=%s sslmode=disable",
-			c.PostgresHost, c.PostgresPort, c.PostgresUser, c.PostgresDatabase)
+		return fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=%s",
+			c.PostgresHost, c.PostgresPort, c.PostgresUser, c.PostgresDatabase, c.PostgresSSLMode)
 	}
 
-	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		c.PostgresHost, c.PostgresPort, c.PostgresUser, c.PostgresPassword, c.PostgresDatabase)
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		c.PostgresHost, c.PostgresPort, c.PostgresUser, c.PostgresPassword, c.PostgresDatabase, c.PostgresSSLMode)
 }
