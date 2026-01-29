@@ -14,6 +14,16 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o app ./cmd/
 
 ### Этап 2: рантайм
-FROM alpine:latest
-COPY --from=builder /app/bot /bot
-CMD ["/bot"]
+FROM alpine:3.20
+
+WORKDIR /app
+
+RUN adduser -D -g '' appuser
+
+COPY --from=builder /app/app /app/app
+
+EXPOSE 8284
+
+USER appuser
+
+ENTRYPOINT ["/app/app"]
