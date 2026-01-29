@@ -30,6 +30,7 @@ func (s *Service) ListTasks(ctx context.Context, userID string) ([]models.Task, 
 }
 
 func (s *Service) CompleteTask(ctx context.Context, taskID string) error {
+
 	return s.repo.CompleteTask(ctx, taskID)
 }
 func (s *Service) DeleteTask(ctx context.Context, id string) error {

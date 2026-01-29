@@ -7,7 +7,7 @@ import (
 )
 
 func New() zerolog.Logger {
-	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05"}
+	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:01:05"}
 	logger := zerolog.New(output).With().Timestamp().Logger()
 	return logger
 
